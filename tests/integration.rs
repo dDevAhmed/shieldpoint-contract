@@ -93,14 +93,21 @@ fn full_flow_valid_proof() {
 
     // 3. Store proof record in registry
     let registry_client = RegistryClient::new(&env, &registry_id);
+    let user = Address::generate(&env);
+    registry_client.initialize(&verifier_id);
     let hash = proof_hash(&env, &proof);
-    registry_client.store_proof(&hash, &0u32, &true);
+    let proof_id = registry_client.store_proof(&user, &0u32, &hash, &true);
 
     // 4. Confirm it was stored
-    assert!(registry_client.has_proof(&hash), "proof must be in registry");
-    let record = registry_client.get_proof(&hash);
+    assert!(registry_client.has_proof(&proof_id), "proof must be in registry");
+    let record = registry_client.get_proof(&proof_id);
+    assert_eq!(record.user, user);
     assert_eq!(record.proof_type, 0);
-    assert!(record.verified);
+    assert_eq!(record.commitment_hash, hash);
+    assert!(record.valid);
+    let user_proofs = registry_client.get_user_proofs(&user);
+    assert_eq!(user_proofs.len(), 1);
+    assert_eq!(user_proofs.get(0).unwrap(), proof_id);
 }
 
 // ── Test 2: replay_attack_rejected ──────────────────────────────────────────
